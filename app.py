@@ -1,33 +1,35 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, jsonify
 import joblib
 import numpy as np
-from datetime import datetime
+import requests
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 
-MODEL_PATH = "solar_model.pkl"
+model = joblib.load("solar_model.pkl")
 
-if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError("solar_model.pkl not found!")
-
-model = joblib.load(MODEL_PATH)
-
+API_KEY = os.environ.get("OPENWEATHER_API_KEY")  # safer for deployment
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
-
-@app.route("/predict", methods=["POST"])
-def predict():
+@app.route("/predict/<city>")
+def predict(city):
     try:
-        data = request.get_json()
+        url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}"
+        response = requests.get(url)
+        data = response.json()
 
-        temperature = float(data["temperature"])
-        pressure = float(data["pressure"])
-        humidity = float(data["humidity"])
-        wind_direction = float(data["wind_direction"])
+        if response.status_code != 200:
+            return jsonify({"error": data})
+
+        # Extract real values
+        temperature = data["main"]["temp"] - 273.15  # Kelvin → Celsius
+        pressure = data["main"]["pressure"]
+        humidity = data["main"]["humidity"]
+        wind_direction = data["wind"].get("deg", 0)
 
         now = datetime.now()
         hour = now.hour
@@ -45,20 +47,13 @@ def predict():
         prediction = model.predict(features)[0]
 
         return jsonify({
-            "prediction": round(float(prediction), 2),
-            "hour": hour,
-            "day": day,
-            "month": month
+            "city": city,
+            "temperature": round(temperature, 2),
+            "pressure": pressure,
+            "humidity": humidity,
+            "wind_direction": wind_direction,
+            "prediction": round(float(prediction), 2)
         })
 
     except Exception as e:
         return jsonify({"error": str(e)})
-    
-
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-
-
