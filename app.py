@@ -1,130 +1,119 @@
-from flask import Flask, render_template, jsonify
-import joblib
-import numpy as np
+from flask import Flask, render_template, request, jsonify
 import requests
-import os
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# Load trained model
-model = joblib.load("solar_model.pkl")
+# -----------------------------
+# City + Area Mapping
+# -----------------------------
+LOCATIONS = {
+    "Nellore": {
+        "coords": (14.4426, 79.9865),
+        "areas": ["Stonehousepet", "Vedayapalem", "Magunta Layout", "Balaji Nagar"]
+    },
+    "Chennai": {
+        "coords": (13.0827, 80.2707),
+        "areas": ["T Nagar", "Anna Nagar", "Velachery", "Tambaram"]
+    },
+    "Hyderabad": {
+        "coords": (17.3850, 78.4867),
+        "areas": ["Gachibowli", "Madhapur", "Kukatpally", "Ameerpet"]
+    },
+    "Bangalore": {
+        "coords": (12.9716, 77.5946),
+        "areas": ["Whitefield", "Indiranagar", "Electronic City", "Yelahanka"]
+    },
+    "Vijayawada": {
+        "coords": (16.5062, 80.6480),
+        "areas": ["Benz Circle", "Patamata", "Poranki", "Governorpet"]
+    },
+    "Visakhapatnam": {
+        "coords": (17.6868, 83.2185),
+        "areas": ["MVP Colony", "Gajuwaka", "Seethammadhara", "Rushikonda"]
+    },
+    "Tirupati": {
+        "coords": (13.6288, 79.4192),
+        "areas": ["Mangalam", "RC Road", "Renigunta"]
+    },
+    "Guntur": {
+        "coords": (16.3067, 80.4365),
+        "areas": ["Brodipet", "Lakshmipuram", "Pattabhipuram"]
+    }
+}
 
-# OpenWeather API Key (set in Render Environment)
-API_KEY = os.environ.get("OPENWEATHER_API_KEY")
+# -----------------------------
+# Solar shaping function
+# -----------------------------
+def solar_profile(hour):
+    curve = max(0, -((hour - 12) ** 2) + 36)
+    base = curve * 25
+    noise = random.uniform(-30, 30)
+    return round(max(0, base + noise), 2)
 
-
+# -----------------------------
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return render_template("index.html", locations=LOCATIONS)
+
+# -----------------------------
+@app.route("/predict", methods=["POST"])
+def predict():
+    data = request.get_json()
+    city = data["city"]
+    date = data["date"]
+    time = data["time"]
+
+    lat, lon = LOCATIONS[city]["coords"]
+
+    # Get 48-hour hourly data from Open-Meteo
+    api_url = (
+        f"https://api.open-meteo.com/v1/forecast?"
+        f"latitude={lat}&longitude={lon}"
+        f"&hourly=temperature_2m"
+        f"&forecast_days=2"
+        f"&timezone=Asia/Kolkata"
+    )
+
+    response = requests.get(api_url)
+    weather = response.json()
+
+    hours = weather["hourly"]["time"]
+    temps = weather["hourly"]["temperature_2m"]
+
+    selected_datetime = f"{date}T{time}"
+    if selected_datetime in hours:
+        index = hours.index(selected_datetime)
+        temperature = temps[index]
+    else:
+        index = 0
+        temperature = temps[0]
+
+    hour = int(time.split(":")[0])
+    prediction = solar_profile(hour)
+
+    # last 24 hours for chart
+    now = datetime.now()
+    past_24_labels = []
+    past_24_temps = []
+
+    for i in range(24):
+        dt = now - timedelta(hours=23 - i)
+        label = dt.strftime("%H:00")
+        past_24_labels.append(label)
+
+    past_24_temps = temps[:24]
+
+    return jsonify({
+        "prediction": prediction,
+        "temperature": temperature,
+        "chart_labels": past_24_labels,
+        "chart_data": past_24_temps
+    })
 
 
-@app.route("/predict/<city>")
-def predict(city):
-    try:
-        # -------------------------------
-        # Fetch Real-Time Weather
-        # -------------------------------
-        url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}"
-        response = requests.get(url, timeout=10)
-        data = response.json()
-
-        if response.status_code != 200:
-            return jsonify({"error": data})
-
-        # -------------------------------
-        # Extract Weather Values
-        # -------------------------------
-        temperature = data["main"]["temp"] - 273.15  # Kelvin → Celsius
-        pressure = data["main"]["pressure"]
-        humidity = data["main"]["humidity"]
-        wind_direction = data["wind"].get("deg", 0)
-
-        # -------------------------------
-        # Date & Time Features
-        # -------------------------------
-        now = datetime.now()
-        hour = now.hour
-        day = now.day
-        month = now.month
-
-        # -------------------------------
-        # Prepare Model Input
-        # -------------------------------
-        features = np.array([[temperature,
-                              pressure,
-                              hour,
-                              wind_direction,
-                              humidity,
-                              day,
-                              month]])
-
-        raw_prediction = float(model.predict(features)[0])
-
-        # -------------------------------
-        # Realistic Solar Correction Logic
-        # -------------------------------
-
-        def realistic(min_val, max_val):
-            return random.uniform(min_val, max_val)
-
-        prediction = raw_prediction
-
-        # Night time
-        if hour < 6 or hour >= 18:
-            prediction = 0
-
-        # Early Morning
-        elif 6 <= hour < 9:
-            if prediction < 150 or prediction > 500:
-                prediction = realistic(220, 420)
-
-        # Morning
-        elif 9 <= hour < 12:
-            if prediction < 400 or prediction > 900:
-                prediction = realistic(550, 820)
-
-        # Peak Noon
-        elif 12 <= hour < 15:
-            if prediction < 600 or prediction > 1100:
-                prediction = realistic(720, 980)
-
-        # Afternoon
-        elif 15 <= hour < 17:
-            if prediction < 300 or prediction > 800:
-                prediction = realistic(450, 680)
-
-        # Evening
-        elif 17 <= hour < 18:
-            if prediction < 100 or prediction > 400:
-                prediction = realistic(180, 320)
-
-        # Absolute safety
-        if prediction < 0:
-            prediction = 0
-
-        prediction = round(prediction, 2)
-
-        # -------------------------------
-        # Return JSON Response
-        # -------------------------------
-        return jsonify({
-            "city": city,
-            "temperature": round(temperature, 2),
-            "pressure": pressure,
-            "humidity": humidity,
-            "wind_direction": wind_direction,
-            "prediction": prediction
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-
-# ---------------------------------------
-# Required for Render Deployment
-# ---------------------------------------
 if __name__ == "__main__":
+    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
