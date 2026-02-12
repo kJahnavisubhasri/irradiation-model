@@ -467,6 +467,7 @@ function openPredict(loc) {
 
 /* PREDICTION SYSTEM */
 async function runPrediction() {
+
     const area = document.getElementById("area").value;
     const date = document.getElementById("date").value;
     const time = document.getElementById("time").value;
@@ -476,68 +477,46 @@ async function runPrediction() {
 
     const status = document.getElementById("statusText");
     status.style.display = "block";
-    status.innerHTML = "🌐 Fetching Live Weather Data...";
-
-    // Simulated weather input (you can later replace with real API)
-    const temperature = 28 + Math.random() * 4;
-    const humidity = 50 + Math.random() * 20;
-    const pressure = 1008 + Math.random() * 6;
-    const wind_direction = 120 + Math.random() * 80;
-
-    await new Promise(r => setTimeout(r, 800));
-
-    status.innerHTML = "🤖 Sending Data to AI Model...";
-    await new Promise(r => setTimeout(r, 1000));
+    status.innerHTML = "🌐 Fetching real-time weather data...";
 
     try {
-        const response = await fetch("/predict", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                temperature: temperature,
-                pressure: pressure,
-                humidity: humidity,
-                wind_direction: wind_direction
-            })
-        });
+        const response = await fetch(`/predict/${currentLocation}`);
+        const data = await response.json();
 
-        const result = await response.json();
-
-        if (result.error) {
-            alert(result.error);
+        if (data.error) {
+            alert("Error: " + JSON.stringify(data.error));
             return;
         }
 
-        const irr = result.prediction;
+        status.innerHTML = "🤖 Running AI Model...";
+
+        await new Promise(r => setTimeout(r, 800));
 
         document.getElementById("finalResult").innerHTML = `
-            <h3>Location: ${currentLocation}, ${area}</h3>
+            <h3>Location: ${data.city}, ${area}</h3>
             <p>Date: ${date} | Time: ${time}</p>
+
             <h1 style="font-size: 3.5rem; color: var(--accent-orange); margin: 15px 0;">
-                ${irr} <small style="font-size:1rem; color:white;">W/m²</small>
+                ${data.prediction} <small style="font-size:1rem; color:white;">W/m²</small>
             </h1>
+
             <div style="background:rgba(255,255,255,0.2); padding:10px; border-radius:10px;">
-                🌡 Temp: ${temperature.toFixed(1)}°C |
-                💧 Humidity: ${humidity.toFixed(0)}% |
-                ⚙️ Pressure: ${pressure.toFixed(0)} hPa |
-                🧭 Wind Dir: ${wind_direction.toFixed(0)}°
+                🌡 Temp: ${data.temperature}°C |
+                💧 Humidity: ${data.humidity}% |
+                ⚙️ Pressure: ${data.pressure} hPa |
+                🧭 Wind Dir: ${data.wind_direction}°
             </div>
-            <p style="margin-top:10px;">
-                🕒 Auto Time Used: ${result.hour}:00 |
-                📅 ${result.day}/${result.month}
-            </p>
         `;
 
         status.style.display = "none";
         showPage('resultPage');
 
     } catch (error) {
-        alert("Prediction Failed");
+        alert("Failed to fetch weather data.");
         console.error(error);
     }
 }
+
 
 /* DASHBOARD CHART */
 const ctx = document.getElementById('miniChart').getContext('2d');
@@ -567,3 +546,4 @@ new Chart(ctx, {
 
 </body>
 </html>
+
