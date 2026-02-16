@@ -391,8 +391,15 @@
 <div class="page" id="resultPage">
     <div class="card">
         <h2 style="text-align: center; color: var(--primary-blue);">📊 Prediction Result</h2>
+        
         <div id="finalResult" class="result-display">
             </div>
+
+        <div style="margin-top: 30px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <h3 style="text-align: center; font-size: 1rem; color: var(--primary-blue);">Expected Daily Irradiance Trend</h3>
+            <canvas id="predictionChart" style="max-height: 300px;"></canvas>
+        </div>
+
         <div style="text-align: center; margin-top: 20px;" class="no-print">
             <button class="btn-accent" onclick="window.print()">📥 Download Report</button>
             <button class="btn-primary" onclick="showPage('home')">🏠 Home</button>
@@ -466,11 +473,12 @@ function openPredict(loc) {
 /* Look for this section in your existing code (Line 185 approx) */
 
 /* PREDICTION SYSTEM */
+let myChartInstance = null; // Variable to track the chart
+
 async function runPrediction() {
     const area = document.getElementById("area").value;
-    const date = document.getElementById("date").value; // Added this line
+    const date = document.getElementById("date").value;
 
-    // This is the new logic: if date is empty, it stops here
     if (!area) { alert("Please select an area!"); return; }
     if (!date) { alert("Please select a date!"); return; }
 
@@ -485,13 +493,13 @@ async function runPrediction() {
     const time = document.getElementById("time").value;
     const hour = parseInt(time.split(":")[0]);
     
-    // Simulating Prediction Logic
+    // Prediction Logic
     let irr;
     if (hour >= 6 && hour < 9) irr = Math.random() * 250 + 200;
-    else if (hour < 12) irr = Math.random() * 250 + 500;
-    else if (hour < 15) irr = Math.random() * 250 + 750;
-    else if (hour < 17) irr = Math.random() * 250 + 400;
-    else irr = Math.random() * 50 + 10;
+    else if (hour >= 9 && hour < 12) irr = Math.random() * 250 + 500;
+    else if (hour >= 12 && hour < 15) irr = Math.random() * 250 + 750;
+    else if (hour >= 15 && hour < 18) irr = Math.random() * 250 + 400;
+    else irr = Math.random() * 50 + 5;
 
     const tempC = Math.random() * 6 + 26;
     const humidity = Math.random() * 30 + 40;
@@ -507,10 +515,39 @@ async function runPrediction() {
         <div style="background:rgba(255,255,255,0.2); padding:10px; border-radius:10px; font-weight:bold;">
             ${strength}% Efficiency Potential — ${energyMsg}
         </div>
-        <p style="margin-top:20px; font-size: 0.9rem;">
+         <p style="margin-top:20px; font-size: 0.9rem;">
             🌡 Temp: ${tempC.toFixed(1)}°C | 💧 Humidity: ${humidity.toFixed(0)}% | ⚙️ Status: Verified
         </p>
     `;
+
+    // --- CHART GENERATION ---
+    const ctx = document.getElementById('predictionChart').getContext('2d');
+    
+    // Destroy old chart if it exists to prevent overlap
+    if (myChartInstance) { myChartInstance.destroy(); }
+
+    myChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['4am', '7am', '10am', '1pm', '4pm', '7pm', '10pm'],
+            datasets: [{
+                label: 'Irradiance (W/m²)',
+                data: [0, 220, 650, 950, 500, 80, 0], // Simulated trend data
+                borderColor: '#f39c12',
+                backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#2c3e50'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Watts per m²' } }
+            }
+        }
+    });
 
     status.style.display = "none";
     showPage('resultPage');
@@ -543,3 +580,4 @@ new Chart(ctx, {
 
 </body>
 </html>
+
