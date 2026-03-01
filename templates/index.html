@@ -280,6 +280,7 @@
     <span class="closebtn" onclick="closeNav()">&times;</span>
     <a href="#" onclick="navTo('home')">🏠 Home</a>
     <a href="#" onclick="navTo('predict')">☀️ Prediction Tool</a>
+    <a onclick="showPage('benchmarks')">Solar guide</a>
     <a href="#" onclick="navTo('about')">📖 Technology</a>
     <a href="#" onclick="navTo('team')">👥 Research Team</a>
     <a href="#" onclick="navTo('howtouse')">How to use❓</a>
@@ -332,7 +333,59 @@
         </div>                         
     </div>
 </div>
-
+<div class="page" id="benchmarks">
+<div class="card">
+           <h2 style="color: var(--primary-blue); text-align: center;">Solar Irradiance Classification</h2>
+        <p style="text-align: center; font-size: 0.9rem; color: #666;">Use this scale to understand the AI's prediction ranges based on sky conditions.</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem;">
+            <thead style="background: var(--primary-blue); color: white;">
+                <tr>
+                    <th style="padding: 12px; border: 1px solid #ddd;">Status</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">Condition</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">Clouds %</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">Range (W/m²)</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">Visual</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background: #e8f5e9;">
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; color: #27ae60;">🌟 BEST</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">Clear Sky</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">0-10%</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">800-1050</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">Bright Sun</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">—</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">Partly Cloudy</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">20-50%</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">400-700</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">Hazy Sun</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">—</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">Overcast</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">60-90%</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">150-350</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">Gray Sky</td>
+                </tr>
+                <tr style="background: #ffebee;">
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; color: #e74c3c;">⚠️ WORST</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">Rain/Storm</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">95-100%</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">50-150</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">Dark Clouds</td>
+                </tr>
+            </body>
+        </table>
+        <div style="text-align: center; margin-top: 30px;">
+             <button class="btn-primary" onclick="showPage('home')">⬅ Back</button>
+             <button class="btn-primary" onclick="showPage('locations')">Go to Prediction Tool →</button>
+        </div>
+    </div>
+</div>
+    
 <div class="page" id="about">
     <div class="card">
         <h2>The Technology</h2>
@@ -580,4 +633,5 @@ new Chart(ctx, {
 
 </body>
 </html>
+
 
